@@ -5,6 +5,7 @@ namespace Grav\Plugin;
 use Grav\Common\Plugin;
 use Grav\Plugin\GravMudAdmin\MudAdminApiBridgeController;
 use Grav\Plugin\GravMudAdmin\MudAdminRouter;
+use Grav\Plugin\GravMudAdmin\MudPluginCapabilities;
 use RocketTheme\Toolbox\Event\Event;
 
 class GravMudAdminPlugin extends Plugin
@@ -21,7 +22,6 @@ class GravMudAdminPlugin extends Plugin
 
         if (self::supportsGravApiBridge()) {
             $events['onApiRegisterRoutes'] = ['onApiRegisterRoutes', 0];
-            $events['onApiCollectPublicRoutes'] = ['onApiCollectPublicRoutes', 0];
             $events['onApiSidebarItems'] = ['onApiSidebarItems', 0];
             $events['onApiPluginPageInfo'] = ['onApiPluginPageInfo', 0];
             $events['onApiAdminSettingsPanels'] = ['onApiAdminSettingsPanels', 0];
@@ -76,18 +76,47 @@ class GravMudAdminPlugin extends Plugin
         $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mud-admin/config', [MudAdminApiBridgeController::class, 'config']);
         $routes->addRoute(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/mud-admin', $controller);
         $routes->addRoute(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/mud-admin/{subpath:.+}', $controller);
+
+        $this->registerTeamDcApiRoutes($routes);
     }
 
-    public function onApiCollectPublicRoutes(Event $event): void
+    private function registerTeamDcApiRoutes(\Grav\Plugin\Api\ApiRouteCollector $routes): void
     {
-        if (!$this->isEnabled()) {
-            return;
+        $root = GRAV_ROOT . '/user/plugins';
+
+        $javabean = $root . '/javabean-admin2/classes/JavaBeanApiBridgeController.php';
+        if (is_file($javabean) && (bool) $this->grav['config']->get('plugins.javabean-admin2.enabled', false)) {
+            require_once $root . '/javabean-admin2/classes/JavaBeanLegacy.php';
+            require_once $javabean;
+            $ctrl = \Grav\Plugin\JavaBeanAdmin2\JavaBeanApiBridgeController::class;
+            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/presets', [$ctrl, 'presets']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/fonts', [$ctrl, 'fonts']);
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/javabean/settings', [$ctrl, 'settings']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/theme.css', [$ctrl, 'themeCss']);
         }
 
-        $apiBase = (string) ($event['api_base'] ?? '/api/v1');
-        $prefixes = (array) ($event['prefixes'] ?? []);
-        $prefixes[] = rtrim($apiBase, '/') . '/mud-admin';
-        $event['prefixes'] = $prefixes;
+        $dock = $root . '/operator-dock-admin2/classes/OperatorDockApiBridgeController.php';
+        if (is_file($dock) && (bool) $this->grav['config']->get('plugins.operator-dock-admin2.enabled', false)) {
+            require_once $dock;
+            $ctrl = \Grav\Plugin\OperatorDockAdmin2\OperatorDockApiBridgeController::class;
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/operator-dock/settings', [$ctrl, 'settings']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/operator-dock/launchpad', [$ctrl, 'launchpad']);
+        }
+
+        $mambo = $root . '/mambo-desktop-admin2/classes/DesktopApiBridgeController.php';
+        if (is_file($mambo) && (bool) $this->grav['config']->get('plugins.mambo-desktop-admin2.enabled', false)) {
+            require_once $mambo;
+            $ctrl = \Grav\Plugin\MamboDesktopAdmin2\DesktopApiBridgeController::class;
+            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/bootstrap', [$ctrl, 'bootstrap']);
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/notepad', [$ctrl, 'notepad']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/explorer', [$ctrl, 'explorer']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/vitals', [$ctrl, 'vitals']);
+            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/recent-pages', [$ctrl, 'recentPages']);
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/maintenance', [$ctrl, 'maintenance']);
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/sticky-notes', [$ctrl, 'stickyNotes']);
+            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/wallpaper-prefs', [$ctrl, 'wallpaperPrefs']);
+            $routes->addRoute(['GET', 'POST', 'DELETE', 'OPTIONS'], '/mambo-desktop/wallpaper/custom', [$ctrl, 'wallpaperCustom']);
+        }
     }
 
     public function onApiSidebarItems(Event $event): void
@@ -95,6 +124,8 @@ class GravMudAdminPlugin extends Plugin
         if (!$this->isEnabled() || !$this->canUseAdmin2($event['user'] ?? null)) {
             return;
         }
+
+        require_once __DIR__ . '/classes/MudPluginCapabilities.php';
 
         $items = $event['items'] ?? [];
         $items[] = [
@@ -129,14 +160,16 @@ class GravMudAdminPlugin extends Plugin
             'route' => '/plugin/grav-mud-admin#menus',
             'priority' => 87,
         ];
-        $items[] = [
-            'id' => 'grav-mud-admin-forumz',
-            'plugin' => 'grav-mud-admin',
-            'label' => 'Forumz Mod',
-            'icon' => 'fa-comments',
-            'route' => '/plugin/grav-mud-admin#forumz',
-            'priority' => 86,
-        ];
+        if (MudPluginCapabilities::installed('grav-mud-forumz')) {
+            $items[] = [
+                'id' => 'grav-mud-admin-forumz',
+                'plugin' => 'grav-mud-admin',
+                'label' => 'Forumz Mod',
+                'icon' => 'fa-comments',
+                'route' => '/plugin/grav-mud-admin#forumz',
+                'priority' => 86,
+            ];
+        }
         $event['items'] = $items;
     }
 

@@ -58,6 +58,21 @@ class MudAdminApi
         $sub = trim(substr($path, strlen($apiPrefix)), '/');
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
+        require_once __DIR__ . '/MudTeamDcBridge.php';
+        $teamDc = MudTeamDcBridge::resolve($this->grav, $sub, $method);
+        if ($teamDc !== null) {
+            $this->requireAuth($method);
+            if (isset($teamDc['body'])) {
+                if (!$this->bridgeMode) {
+                    header('Content-Type: ' . ($teamDc['content_type'] ?? 'text/plain'));
+                }
+                echo $teamDc['body'];
+                return;
+            }
+            $this->respond($teamDc);
+            return;
+        }
+
         try {
             if ($sub === 'status' && $method === 'GET') {
                 $this->respond($this->status());
@@ -131,6 +146,12 @@ class MudAdminApi
             if ($sub === 'theme/preview' && $method === 'POST') {
                 $this->requireAuth($method);
                 $this->respond($this->previewTheme($this->readJsonBody()));
+                return;
+            }
+            if ($sub === 'capabilities' && $method === 'GET') {
+                $this->requireAuth($method);
+                require_once __DIR__ . '/MudPluginCapabilities.php';
+                $this->respond(MudPluginCapabilities::payload($this->grav));
                 return;
             }
             if ($sub === 'stats' && $method === 'GET') {

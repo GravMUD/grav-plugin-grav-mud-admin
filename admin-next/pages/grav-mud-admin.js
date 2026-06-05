@@ -6,7 +6,17 @@
 (function () {
   const TAG = window.__GRAV_PAGE_TAG || 'grav-grav-mud-admin--page';
   const PREVIEW_MS = 700;
-  const VIEWS = ['dashboard', 'widgets', 'editor', 'menus', 'forumz', 'theme', 'media', 'feeds'];
+  const ALL_VIEWS = ['dashboard', 'widgets', 'editor', 'menus', 'forumz', 'theme', 'media', 'feeds'];
+  const TAB_LABELS = {
+    dashboard: 'Dashboard',
+    widgets: 'Widget Builder',
+    editor: 'MUD Editor',
+    menus: 'Menus',
+    forumz: 'Forumz',
+    theme: 'Theme',
+    media: 'Media',
+    feeds: 'RSS Feeds',
+  };
 
   function apiConfig() {
     return {
@@ -32,7 +42,7 @@
     if (!isForm) headers['Content-Type'] = 'application/json';
     if (cfg.token) headers['X-API-Token'] = cfg.token;
 
-    const res = await fetch(apiUrl(path), { ...options, headers });
+    const res = await fetch(apiUrl(path), { ...options, headers, credentials: 'include' });
     const text = await res.text();
     let data;
     try {
@@ -244,7 +254,6 @@
     connectedCallback() {
       if (this._booted) return;
       this._booted = true;
-      this._view = this._readInitialView();
       this._editor = { path: '', dirty: false, live: true, timer: null, pages: [] };
       this._menu = { data: { items: [] }, selectedId: null, dirty: false, dragId: null };
       this._forumzTab = 'queue';
@@ -255,9 +264,41 @@
       };
       this._media = { items: [], insertMode: false };
       this._feeds = { items: [], dirty: false };
+      this._tabs = ALL_VIEWS.reduce((acc, id) => ({ ...acc, [id]: true }), {});
+      this._view = this._readInitialView();
       this._renderShell();
-      this._switchView(this._view, true);
+      this._loadCapabilities()
+        .then(() => this._switchView(this._view, true))
+        .catch((e) => {
+          this._setStatus(e.message, true);
+          this._switchView(this._view, true);
+        });
       window.addEventListener('hashchange', () => this._switchView(this._readInitialView(), true));
+    }
+
+    async _loadCapabilities() {
+      try {
+        const data = await mudApi('/capabilities');
+        if (data.tabs && typeof data.tabs === 'object') {
+          this._tabs = { ...this._tabs, ...data.tabs };
+        }
+      } catch (_) {
+        /* keep defaults */
+      }
+      this._applyTabVisibility();
+    }
+
+    _enabledViews() {
+      return ALL_VIEWS.filter((id) => this._tabs[id] !== false);
+    }
+
+    _applyTabVisibility() {
+      const enabled = this._enabledViews();
+      this._els.tabs.querySelectorAll('.evvy-tab').forEach((tab) => {
+        const on = enabled.includes(tab.dataset.view);
+        tab.hidden = !on;
+        tab.disabled = !on;
+      });
     }
 
     disconnectedCallback() {
@@ -267,7 +308,9 @@
 
     _readInitialView() {
       const hash = (location.hash || '').replace(/^#/, '').toLowerCase();
-      return VIEWS.includes(hash) ? hash : 'dashboard';
+      const enabled = this._enabledViews();
+      if (enabled.includes(hash)) return hash;
+      return enabled[0] || 'dashboard';
     }
 
     _renderShell() {
@@ -286,21 +329,12 @@
         status: this.querySelector('[data-status]'),
       };
 
-      VIEWS.forEach((id) => {
+      ALL_VIEWS.forEach((id) => {
         const tab = document.createElement('button');
         tab.type = 'button';
         tab.className = 'evvy-tab';
         tab.dataset.view = id;
-        tab.textContent = {
-          dashboard: 'Dashboard',
-          widgets: 'Widget Builder',
-          editor: 'MUD Editor',
-          menus: 'Menus',
-          forumz: 'Forumz',
-          theme: 'Theme',
-          media: 'Media',
-          feeds: 'RSS Feeds',
-        }[id];
+        tab.textContent = TAB_LABELS[id] || id;
         tab.addEventListener('click', () => this._switchView(id));
         this._els.tabs.appendChild(tab);
 
@@ -321,7 +355,8 @@
     }
 
     async _switchView(id, fromHash) {
-      if (!VIEWS.includes(id)) id = 'editor';
+      const enabled = this._enabledViews();
+      if (!enabled.includes(id)) id = enabled[0] || 'dashboard';
       this._view = id;
       if (!fromHash) {
         const next = `#${id}`;
