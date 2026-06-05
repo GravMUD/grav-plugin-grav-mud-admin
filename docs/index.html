@@ -97,16 +97,17 @@
   </nav>
 
   <header class="hero">
-    <span class="eyebrow">MIT · EvvyTink · Grav 1.7 + Admin2</span>
+    <span class="eyebrow">MIT · GPM · EvvyTink · Grav 1.7 + Admin2</span>
     <h1>Tinker with <span class="accent">.mud</span><br>without the toll booth.</h1>
-    <p class="lead">GravMUD Admin is the **MUD-native control panel** — split-pane editor, live compile preview, Publish, Widget Builder, and MCP Copilot API. **Free forever.**</p>
+    <p class="lead">GravMUD Admin is the MUD-native control panel — split-pane editor, live compile preview, Publish, Widget Builder, and MCP Copilot API. <strong>Free forever.</strong> Listed in GPM.</p>
     <div class="hero-actions">
-      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Get EvvyTink</a>
+      <a class="btn btn-accent" href="#install">GPM install</a>
+      <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Release zip</a>
       <a class="btn btn-ghost" href="https://gravmud.site/get-started">Full starter package</a>
       <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-alpha">grav-mud-alpha</a>
     </div>
     <div class="stats">
-      <div class="stat"><div class="stat-num">MIT</div><div class="stat-label">Free all sites</div></div>
+      <div class="stat"><div class="stat-num">GPM</div><div class="stat-label">Official index</div></div>
       <div class="stat"><div class="stat-num">/mud-admin</div><div class="stat-label">Grav 1.7 SPA</div></div>
       <div class="stat"><div class="stat-num">Admin2</div><div class="stat-label">Web component</div></div>
       <div class="stat"><div class="stat-num">MCP</div><div class="stat-label">Copilot API</div></div>
@@ -128,17 +129,17 @@
   <section id="install">
     <h2>Install</h2>
     <div class="install">
-      <p>Requires <strong>grav-mud-alpha</strong> first. Set an access token for API writes.</p>
-      <pre style="text-align: left; max-width: 680px; margin: 0 auto 1.25rem;"><code>bin/gpm direct-install \
-  https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest/download/grav-plugin-grav-mud-admin.zip
+      <p>Requires <strong>grav-mud-alpha</strong> first. Both plugins are in GPM — free MIT.</p>
+      <pre style="text-align: left; max-width: 680px; margin: 0 auto 1.25rem;"><code>bin/gpm install grav-mud-alpha
+bin/gpm install grav-mud-admin
+bin/grav cache
 
 # user/config/plugins/grav-mud-admin.yaml
 enabled: true
-access_token: 'your-secret-token'
-
-bin/grav cache</code></pre>
-      <p>Open <strong>/mud-admin</strong> or Admin2 → MUD Editor on Grav 2.0.</p>
-      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Download release zip</a>
+access_token: 'your-secret-token'</code></pre>
+      <p>Open <strong>/mud-admin</strong> or Admin2 → MUD Editor on Grav 2.0. CodeMirror spec editor — not WYSIWYG.</p>
+      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin#installation">README on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest" style="margin-left:0.5rem">Offline zip</a>
     </div>
   </section>
 
