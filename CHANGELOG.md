@@ -2,8 +2,8 @@
 ## 06/05/2026
 
 1. [](#new)
-    * **GPM listing** — `bin/gpm install grav-mud-admin` (install `grav-mud-alpha` first)
     * **MIT license flip** — GravMUD Admin + EvvyTink free for all sites (groundswell canon)
+    * **grav-mud-alpha in GPM** — install compiler via `bin/gpm install grav-mud-alpha` ([getgrav/grav#4106](https://github.com/getgrav/grav/issues/4106)); Admin GPM submission next
     * Public GitHub repo, GitHub Pages landing, Discussions enabled
     * Grav 2.0 Admin2 web component (`admin-next/pages/grav-mud-admin.js`)
     * MUD Copilot API: `/api/mud-admin/spec/reference` + Grav 2.0 bridge at `/api/v1/mud-admin/*`

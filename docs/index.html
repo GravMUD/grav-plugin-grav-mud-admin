@@ -99,7 +99,7 @@
   <header class="hero">
     <span class="eyebrow">MIT · GPM · EvvyTink · Grav 1.7 + Admin2</span>
     <h1>Tinker with <span class="accent">.mud</span><br>without the toll booth.</h1>
-    <p class="lead">GravMUD Admin is the MUD-native control panel — split-pane editor, live compile preview, Publish, Widget Builder, and MCP Copilot API. <strong>Free forever.</strong> Listed in GPM.</p>
+    <p class="lead">GravMUD Admin is the MUD-native control panel — split-pane editor, live compile preview, Publish, Widget Builder, and MCP Copilot API. <strong>Free MIT.</strong> Install alpha from GPM; Admin from GitHub release (GPM next).</p>
     <div class="hero-actions">
       <a class="btn btn-accent" href="#install">GPM install</a>
       <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Release zip</a>
@@ -107,7 +107,7 @@
       <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-alpha">grav-mud-alpha</a>
     </div>
     <div class="stats">
-      <div class="stat"><div class="stat-num">GPM</div><div class="stat-label">Official index</div></div>
+      <div class="stat"><div class="stat-num">MIT</div><div class="stat-label">Free all sites</div></div>
       <div class="stat"><div class="stat-num">/mud-admin</div><div class="stat-label">Grav 1.7 SPA</div></div>
       <div class="stat"><div class="stat-num">Admin2</div><div class="stat-label">Web component</div></div>
       <div class="stat"><div class="stat-num">MCP</div><div class="stat-label">Copilot API</div></div>
@@ -129,9 +129,10 @@
   <section id="install">
     <h2>Install</h2>
     <div class="install">
-      <p>Requires <strong>grav-mud-alpha</strong> first. Both plugins are in GPM — free MIT.</p>
+      <p><strong>grav-mud-alpha</strong> is in GPM. Install Admin from the release zip (GPM listing pending).</p>
       <pre style="text-align: left; max-width: 680px; margin: 0 auto 1.25rem;"><code>bin/gpm install grav-mud-alpha
-bin/gpm install grav-mud-admin
+bin/gpm direct-install \
+  https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest/download/grav-plugin-grav-mud-admin.zip
 bin/grav cache
 
 # user/config/plugins/grav-mud-admin.yaml

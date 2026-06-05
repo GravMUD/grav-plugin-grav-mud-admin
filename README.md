@@ -1,6 +1,8 @@
 # GravMUD Admin · EvvyTink
 
-**Site:** [admin.gravmud.site](https://admin.gravmud.site) · **GPM:** `grav-mud-admin` · **Repo:** [GravMUD/grav-plugin-grav-mud-admin](https://github.com/GravMUD/grav-plugin-grav-mud-admin) · **Discuss:** [GitHub Discussions](https://github.com/GravMUD/grav-plugin-grav-mud-admin/discussions)
+**Site:** [admin.gravmud.site](https://admin.gravmud.site) · **Repo:** [GravMUD/grav-plugin-grav-mud-admin](https://github.com/GravMUD/grav-plugin-grav-mud-admin) · **Discuss:** [GitHub Discussions](https://github.com/GravMUD/grav-plugin-grav-mud-admin/discussions)
+
+> Pair with **[grav-mud-alpha](https://github.com/GravMUD/grav-plugin-grav-mud-alpha)** — in GPM now (`bin/gpm install grav-mud-alpha`). Admin GPM listing pending.
 
 **MIT admin plugin for Grav** — MUD-native editor, live compile preview, publish, and MCP Copilot API for `.mud` sites.
 
@@ -26,13 +28,11 @@
 
 ## Installation
 
-### GPM (recommended)
-
-Install **grav-mud-alpha** first, then Admin:
+### Recommended (alpha via GPM + Admin from GitHub)
 
 ```bash
 bin/gpm install grav-mud-alpha
-bin/gpm install grav-mud-admin
+bin/gpm direct-install https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest/download/grav-plugin-grav-mud-admin.zip
 bin/grav cache
 ```
 
@@ -47,13 +47,9 @@ Open **`/mud-admin`** (Grav 1.7) or **Admin2 → MUD Editor** (Grav 2.0).
 
 ### Manual / offline
 
-```bash
-bin/gpm direct-install https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest/download/grav-plugin-grav-mud-admin.zip
-```
+Extract to `user/plugins/grav-mud-admin` or use the release zip above.
 
-Or extract to `user/plugins/grav-mud-admin` and clear cache.
-
-### Full starter
+> **GPM:** `grav-mud-alpha` is listed ([getgrav/grav#4106](https://github.com/getgrav/grav/issues/4106)). Admin GPM submission is next.
 
 Plugin + theme + demo pages: [gravmud.site/get-started](https://gravmud.site/get-started)
 
