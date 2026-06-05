@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GravMUD Admin · EvvyTink</title>
+  <link rel="stylesheet" href="/user/plugins/grav-mud-admin/admin/assets/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/material-darker.min.css">
+</head>
+<body>
+  <header class="gma-header">
+    <div class="gma-brand">
+      <strong>GravMUD Admin</strong>
+      <span class="gma-badge" id="version-badge">EvvyTink v1.1</span>
+    </div>
+    <div class="gma-actions gma-actions-pages hidden" id="pages-toolbar">
+      <label class="gma-toggle"><input type="checkbox" id="live-preview" checked> Live preview</label>
+      <button type="button" id="btn-insert-image" class="gma-btn gma-btn-small">Insert image</button>
+      <button type="button" id="btn-preview" class="gma-btn">Preview</button>
+      <button type="button" id="btn-save" class="gma-btn">Save</button>
+      <button type="button" id="btn-publish" class="gma-btn gma-btn-primary">Publish</button>
+    </div>
+  </header>
+
+  <div class="gma-shell">
+    <nav class="gma-nav" aria-label="Admin sections">
+      <a href="#/dashboard" class="gma-nav-link active" data-view="dashboard">
+        <span class="gma-nav-icon">◉</span> Dashboard
+      </a>
+      <a href="#/widgets" class="gma-nav-link" data-view="widgets">
+        <span class="gma-nav-icon">▦</span> Widget Builder
+      </a>
+      <a href="#/pages" class="gma-nav-link" data-view="pages">
+        <span class="gma-nav-icon">✎</span> Pages
+      </a>
+      <a href="#/menus" class="gma-nav-link" data-view="menus">
+        <span class="gma-nav-icon">☰</span> Menus
+      </a>
+      <a href="#/media" class="gma-nav-link" data-view="media">
+        <span class="gma-nav-icon">▣</span> Media
+      </a>
+      <a href="#/theme" class="gma-nav-link" data-view="theme">
+        <span class="gma-nav-icon">◈</span> Theme
+      </a>
+      <a href="#/feeds" class="gma-nav-link" data-view="feeds">
+        <span class="gma-nav-icon">⌁</span> RSS Feeds
+      </a>
+      <a href="#/forumz" class="gma-nav-link" data-view="forumz">
+        <span class="gma-nav-icon">💬</span> Forumz
+      </a>
+    </nav>
+
+    <div class="gma-main">
+      <!-- Dashboard -->
+      <section id="view-dashboard" class="gma-view">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Dashboard</h1>
+          <a href="#/widgets" class="gma-btn gma-btn-small">Customize widgets</a>
+        </div>
+        <div id="dashboard-canvas" class="gma-dashboard-canvas">
+          <p class="gma-muted">Loading dashboard…</p>
+        </div>
+      </section>
+
+      <!-- Widget Builder -->
+      <section id="view-widgets" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Widget Builder</h1>
+          <div class="gma-actions-inline">
+            <button type="button" id="btn-save-widgets" class="gma-btn gma-btn-primary">Save layout</button>
+            <button type="button" id="btn-reset-widgets" class="gma-btn">Reset</button>
+          </div>
+        </div>
+        <p class="gma-muted">Add MUD fence widgets or system panels. Drag order with ↑↓. Save writes <code>dashboard-widgets.json</code>.</p>
+
+        <div class="gma-builder-layout">
+          <aside class="gma-builder-sidebar">
+            <h2>Palette</h2>
+            <div id="widget-palette" class="gma-builder-palette"></div>
+
+            <h2>Widgets</h2>
+            <ul id="widget-list" class="gma-widget-list"></ul>
+          </aside>
+
+          <section class="gma-builder-editor">
+            <div id="widget-editor-panel" class="hidden">
+              <label class="gma-inline-label">Title
+                <input type="text" id="widget-title-input" placeholder="Widget title">
+              </label>
+              <label class="gma-toggle gma-inline-label">
+                <input type="checkbox" id="widget-wide-input"> Wide (2 columns)
+              </label>
+              <label class="gma-toggle gma-inline-label">
+                <input type="checkbox" id="widget-enabled-input" checked> Enabled
+              </label>
+
+              <p id="widget-system-note" class="gma-muted hidden"></p>
+
+              <div id="mud-editor-wrap">
+                <div class="gma-editor-toolbar">
+                  <label>EvvyTink · MUD widget source</label>
+                  <button type="button" id="btn-widget-preview" class="gma-btn gma-btn-small">Preview</button>
+                </div>
+                <textarea id="mud-editor" class="gma-mud-editor" rows="14" spellcheck="false" placeholder="::: hero&#10;title: Hello&#10;..."></textarea>
+              </div>
+
+              <label>Live preview</label>
+              <div id="widget-preview-box" class="gma-widget-preview-box">
+                <p class="gma-muted">Select a MUD widget to preview.</p>
+              </div>
+            </div>
+            <p id="widget-editor-empty" class="gma-muted">Select a widget from the list, or add one from the palette.</p>
+          </section>
+        </div>
+      </section>
+
+      <!-- Pages / EvvyTink editor -->
+      <section id="view-pages" class="gma-view hidden">
+        <div class="gma-layout gma-layout-pages">
+          <aside class="gma-sidebar">
+            <div class="gma-sidebar-head">
+              <h2>Pages</h2>
+              <button type="button" id="btn-new-page" class="gma-btn gma-btn-small" title="New page">+</button>
+            </div>
+            <ul id="page-list" class="gma-page-list"></ul>
+          </aside>
+          <section class="gma-editor-pane">
+            <div class="gma-editor-toolbar">
+              <label>EvvyTink · .mud source</label>
+              <button type="button" id="btn-rename" class="gma-btn gma-btn-small" disabled>Rename</button>
+            </div>
+            <div id="editor-host"></div>
+          </section>
+          <section class="gma-preview-pane">
+            <label>Live preview</label>
+            <iframe id="preview" title="Compiled preview" sandbox="allow-same-origin"></iframe>
+          </section>
+        </div>
+      </section>
+
+      <!-- Menus -->
+      <section id="view-menus" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Menus</h1>
+          <div class="gma-actions-inline">
+            <button type="button" id="btn-menu-sync" class="gma-btn">Sync from pages</button>
+            <button type="button" id="btn-menu-save" class="gma-btn gma-btn-primary">Save menu</button>
+          </div>
+        </div>
+        <p class="gma-muted">Drag to reorder · <kbd>Shift</kbd>+drop to nest as submenu · writes <code>user/data/mud-admin/site-menu.json</code>. Themes render multilevel dropdowns automatically.</p>
+
+        <div class="gma-builder-layout gma-menu-layout">
+          <aside class="gma-builder-sidebar">
+            <div class="gma-sidebar-head">
+              <h2>Structure</h2>
+              <button type="button" id="btn-menu-add" class="gma-btn gma-btn-small" title="Add top-level link">+</button>
+            </div>
+            <div id="menu-tree" class="gma-menu-tree"></div>
+            <div class="gma-menu-toolbar">
+              <button type="button" id="btn-menu-add-child" class="gma-btn gma-btn-small">+ Submenu</button>
+              <button type="button" id="btn-menu-nest" class="gma-btn gma-btn-small">Nest ↑</button>
+              <button type="button" id="btn-menu-outdent" class="gma-btn gma-btn-small">Outdent ↓</button>
+              <button type="button" id="btn-menu-delete" class="gma-btn gma-btn-small">Delete</button>
+            </div>
+          </aside>
+
+          <section class="gma-builder-editor">
+            <div id="menu-editor-panel" class="hidden">
+              <h2>Edit link</h2>
+              <label class="gma-inline-label">Label
+                <input type="text" id="menu-item-label" placeholder="Books">
+              </label>
+              <label class="gma-inline-label">Page route (preferred)
+                <input type="text" id="menu-item-page" placeholder="books/joy">
+              </label>
+              <label class="gma-inline-label">Or external URL
+                <input type="text" id="menu-item-url" placeholder="https://…">
+              </label>
+              <label class="gma-toggle gma-inline-label">
+                <input type="checkbox" id="menu-item-visible" checked> Visible
+              </label>
+            </div>
+            <p id="menu-editor-empty" class="gma-muted">Select a menu item — or sync from Grav pages to bootstrap WWWeed’s deep tree.</p>
+          </section>
+        </div>
+      </section>
+
+      <!-- Media -->
+      <section id="view-media" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Media library</h1>
+          <label class="gma-upload-btn gma-btn gma-btn-primary">
+            Upload media
+            <input type="file" id="media-upload" accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime" hidden>
+          </label>
+        </div>
+        <p class="gma-muted">Browse <code>user/pages</code>, <code>user/media</code>, and theme images. Click to copy URL or insert into the open page.</p>
+        <div id="media-grid" class="gma-media-grid"></div>
+      </section>
+
+      <!-- Theme -->
+      <section id="view-theme" class="gma-view hidden">
+        <h1 class="gma-view-title">Theme panel</h1>
+        <p class="gma-muted">Same presets as the site <a href="/theme" target="_blank" rel="noopener">Theme Expo</a> — apply to the page <code>@@@</code> block or tweak tokens in Advanced.</p>
+        <label class="gma-inline-label">Target page
+          <select id="theme-page-select"></select>
+        </label>
+
+        <div class="gma-theme-tabs">
+          <button type="button" class="gma-tab active" data-theme-tab="presets">Presets</button>
+          <button type="button" class="gma-tab" data-theme-tab="advanced">Advanced</button>
+        </div>
+
+        <div id="theme-presets" class="gma-preset-grid"></div>
+
+        <div id="theme-preview-wrap" class="gma-theme-preview-wrap hidden">
+          <label>Live expo preview</label>
+          <iframe id="theme-preview" title="Theme expo preview" sandbox="allow-same-origin"></iframe>
+        </div>
+
+        <form id="theme-advanced-form" class="gma-theme-advanced hidden">
+          <div class="gma-token-grid" id="theme-advanced-fields"></div>
+          <button type="submit" class="gma-btn gma-btn-primary">Apply tokens</button>
+        </form>
+      </section>
+
+      <!-- RSS Feeds -->
+      <section id="view-feeds" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">RSS Feeds</h1>
+          <button type="button" id="btn-add-feed" class="gma-btn">+ Add feed</button>
+        </div>
+        <p class="gma-muted">Dashboard widgets pull headlines from enabled feeds.</p>
+        <ul id="feeds-list" class="gma-feeds-config"></ul>
+        <button type="button" id="btn-save-feeds" class="gma-btn gma-btn-primary">Save feeds</button>
+      </section>
+
+      <!-- Forumz moderation -->
+      <section id="view-forumz" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Forumz · Moderation</h1>
+          <button type="button" id="btn-forumz-refresh" class="gma-btn gma-btn-small">Refresh</button>
+        </div>
+        <p class="gma-muted">Approve threads & replies, pin/lock threads, ban profiles. Flat-file queue from <code>user/data/mud-forumz/</code>.</p>
+
+        <div class="gma-forumz-tabs">
+          <button type="button" class="gma-tab active" data-forumz-tab="queue">Moderation queue</button>
+          <button type="button" class="gma-tab" data-forumz-tab="profiles">Profiles</button>
+        </div>
+
+        <div id="forumz-queue-panel">
+          <div id="forumz-stats-bar" class="gma-forumz-stats"></div>
+          <ul id="forumz-queue-list" class="gma-feed-list gma-forumz-queue"></ul>
+        </div>
+
+        <div id="forumz-profiles-panel" class="hidden">
+          <ul id="forumz-profiles-list" class="gma-feed-list gma-forumz-profiles"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="gma-footer">
+    <span id="status">Loading…</span>
+    <span id="path-label"></span>
+    <button type="button" id="btn-token" class="gma-btn gma-btn-small gma-footer-token">Token</button>
+  </footer>
+
+  <dialog id="token-dialog">
+    <form method="dialog">
+      <h3>Access token</h3>
+      <p>Required to save, publish, upload, and configure feeds.</p>
+      <input type="password" id="token-input" autocomplete="off" autofocus>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button value="ok" class="gma-btn gma-btn-primary">OK</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="new-page-dialog">
+    <form method="dialog" id="new-page-form">
+      <h3>New .mud page</h3>
+      <label>Folder slug <input type="text" id="new-folder" placeholder="03.about" required pattern="[a-z0-9._-]+"></label>
+      <label>Page title <input type="text" id="new-title" placeholder="About" required></label>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button value="ok" class="gma-btn gma-btn-primary">Create</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="rename-dialog">
+    <form method="dialog" id="rename-form">
+      <h3>Rename page</h3>
+      <label>New path <input type="text" id="rename-path" required></label>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button value="ok" class="gma-btn gma-btn-primary">Rename</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="media-picker-dialog">
+    <form method="dialog">
+      <h3>Insert image</h3>
+      <div id="media-picker-grid" class="gma-media-grid gma-media-grid-compact"></div>
+      <menu>
+        <button value="cancel">Cancel</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/mode/simple.min.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/mud-mode.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/admin-app.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/menus-admin.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/forumz-admin.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/widget-builder.js"></script>
+</body>
+</html>

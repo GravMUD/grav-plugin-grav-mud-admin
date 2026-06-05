@@ -1,0 +1,38 @@
+title: GravMUD Admin
+form:
+  validation: loose
+  fields:
+    header_note:
+      type: section
+      title: EvvyTink · Admin2
+      text: 'MUD-native editor settings. The MUD Editor lives in the Admin2 sidebar; legacy /mud-admin SPA remains for Grav 1.7.'
+    enabled:
+      type: toggle
+      label: Plugin Status
+      highlight: 1
+      default: 0
+      options:
+        1: Enabled
+        0: Disabled
+      validate:
+        type: bool
+    route_prefix:
+      type: text
+      label: Legacy admin UI route
+      default: mud-admin
+      help: Public path for the Grav 1.7 EvvyTink SPA fallback (e.g. /mud-admin)
+    api_prefix:
+      type: text
+      label: Legacy API route prefix
+      default: api/mud-admin
+      help: JSON API base for 1.7 SPA and fleet panel (Admin2 uses /api/v1/mud-admin)
+    access_token:
+      type: text
+      label: Fleet / legacy access token
+      help: Required for external writes via X-Mud-Admin-Token. Admin2 users authenticate via Grav API.
+    require_alpha:
+      type: toggle
+      label: Require grav-mud-alpha
+      default: 1
+      validate:
+        type: bool

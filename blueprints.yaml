@@ -1,0 +1,50 @@
+name: GravMUD Admin
+slug: grav-mud-admin
+type: plugin
+version: 1.5.0-alpha
+description: Free MIT MUD-native admin panel with EvvyTink editor. Requires grav-mud-alpha.
+icon: edit
+author:
+  name: FutureVision Labs
+  email: chief@gravmud.site
+homepage: https://gravmud.site
+keywords: grav, mud, admin, evvytink, editor
+license: MIT
+compatibility:
+  grav: ['1.7', '2.0']
+dependencies:
+  - { name: grav, version: '>=1.7.0' }
+  - { name: grav-mud-alpha, version: '>=0.5.0' }
+form:
+  validation: loose
+  fields:
+    enabled:
+      type: toggle
+      label: Plugin Status
+      highlight: 1
+      default: 0
+      options:
+        1: Enabled
+        0: Disabled
+      validate:
+        type: bool
+    route_prefix:
+      type: text
+      label: Admin UI route
+      default: mud-admin
+      help: Public path for EvvyTink SPA (e.g. /mud-admin)
+    api_prefix:
+      type: text
+      label: API route prefix
+      default: api/mud-admin
+      help: JSON API base (e.g. /api/mud-admin/pages)
+    access_token:
+      type: text
+      label: Access token
+      help: Send as Authorization Bearer or X-Mud-Admin-Token header. Required for API writes.
+    require_alpha:
+      type: toggle
+      label: Require grav-mud-alpha
+      default: 1
+      validate:
+        type: bool

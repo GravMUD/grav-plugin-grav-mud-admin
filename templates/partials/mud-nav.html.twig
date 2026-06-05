@@ -1,0 +1,25 @@
+{% macro render_items(items) %}
+  {% for item in items %}
+    <li class="mud-nav-item{% if item.children|length %} mud-nav-item--has-children{% endif %}{% if item.active or item.activeChild %} is-active-branch{% endif %}">
+      <span class="mud-nav-link-wrap">
+        <a href="{{ item.url }}" class="mud-nav-link{% if item.active %} active{% endif %}{% if item.activeChild %} active-child{% endif %}">{{ item.label }}</a>
+        {% if item.children|length %}
+          <button type="button" class="mud-nav-submenu-toggle" aria-expanded="false" aria-label="Toggle {{ item.label }} submenu">
+            <span aria-hidden="true">▾</span>
+          </button>
+        {% endif %}
+      </span>
+      {% if item.children|length %}
+        <ul class="mud-nav-submenu">
+          {{ _self.render_items(item.children) }}
+        </ul>
+      {% endif %}
+    </li>
+  {% endfor %}
+{% endmacro %}
+
+<nav class="site-nav mud-nav" id="site-nav" aria-label="{{ mud_menu.label|default('Primary') }}">
+  <ul class="mud-nav-root">
+    {{ _self.render_items(mud_menu.items) }}
+  </ul>
+</nav>

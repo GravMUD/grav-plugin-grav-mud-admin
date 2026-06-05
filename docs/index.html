@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GravMUD Admin · EvvyTink — free MUD editor for Grav</title>
+  <meta name="description" content="FREE MIT plugin. EvvyTink — edit .mud pages, live preview, publish. Grav 1.7 /mud-admin + Grav 2.0 Admin2. MUD Copilot MCP API.">
+  <meta property="og:title" content="GravMUD Admin · EvvyTink">
+  <meta property="og:description" content="MUD-native admin for flat-file Grav. Free forever.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Raleway:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #120a14;
+      --fg: #fdf2f8;
+      --muted: #c4a3b8;
+      --accent: #f472b6;
+      --accent-bright: #fb7185;
+      --violet: #a78bfa;
+      --card: rgba(244, 114, 182, 0.07);
+      --border: rgba(251, 113, 133, 0.22);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Raleway', ui-sans-serif, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% -5%, rgba(244, 114, 182, 0.22), transparent 55%),
+        radial-gradient(ellipse 55% 35% at 90% 15%, rgba(167, 139, 250, 0.18), transparent 50%),
+        linear-gradient(180deg, #1a0f1e 0%, var(--bg) 50%, #0a060c 100%);
+      z-index: -1;
+    }
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;
+      padding: 0.85rem 1.5rem;
+      backdrop-filter: blur(12px);
+      background: rgba(18, 10, 20, 0.85);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.05rem; text-decoration: none; color: var(--fg); }
+    .logo span { color: var(--accent); }
+    .nav-links { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 1.1rem; border-radius: 999px; font-weight: 600; font-size: 0.88rem;
+      text-decoration: none; transition: transform 0.15s ease; border: none; cursor: pointer; font-family: inherit;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--fg); border-color: var(--accent); }
+    .btn-accent { background: linear-gradient(135deg, var(--accent), var(--accent-bright)); color: #1a0a12; box-shadow: 0 4px 24px rgba(244, 114, 182, 0.35); }
+    .hero { max-width: 920px; margin: 0 auto; padding: 4rem 1.5rem 3rem; text-align: center; }
+    .eyebrow { display: inline-block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--violet); margin-bottom: 1rem; }
+    .hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.2rem, 6vw, 3.4rem); line-height: 1.1; margin: 0 0 1rem; }
+    .hero h1 .accent { background: linear-gradient(90deg, var(--accent-bright), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .lead { font-size: 1.12rem; color: var(--muted); max-width: 640px; margin: 0 auto 1.75rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-bottom: 2.5rem; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; max-width: 720px; margin: 0 auto; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+    .stat-num { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--accent-bright); }
+    .stat-label { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+    section { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    section h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.65rem; margin: 0 0 1.25rem; text-align: center; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.35rem; }
+    .card-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .card h3 { font-size: 1.05rem; margin: 0 0 0.4rem; }
+    .card p { margin: 0; font-size: 0.92rem; color: var(--muted); }
+    .card a { color: var(--accent-bright); }
+    pre { background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.5; }
+    .install { background: linear-gradient(135deg, rgba(244, 114, 182, 0.1), rgba(167, 139, 250, 0.08)); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; text-align: center; }
+    .install p { color: var(--muted); margin: 0 0 1rem; }
+    footer { text-align: center; padding: 2.5rem 1.5rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--accent-bright); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="logo" href="#">GravMUD <span>Admin</span></a>
+    <div class="nav-links">
+      <a class="btn btn-ghost" href="#features">Features</a>
+      <a class="btn btn-ghost" href="#install">Install</a>
+      <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/discussions">Discussions</a>
+      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Download</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">MIT · EvvyTink · Grav 1.7 + Admin2</span>
+    <h1>Tinker with <span class="accent">.mud</span><br>without the toll booth.</h1>
+    <p class="lead">GravMUD Admin is the **MUD-native control panel** — split-pane editor, live compile preview, Publish, Widget Builder, and MCP Copilot API. **Free forever.**</p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Get EvvyTink</a>
+      <a class="btn btn-ghost" href="https://gravmud.site/get-started">Full starter package</a>
+      <a class="btn btn-ghost" href="https://github.com/GravMUD/grav-plugin-grav-mud-alpha">grav-mud-alpha</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num">MIT</div><div class="stat-label">Free all sites</div></div>
+      <div class="stat"><div class="stat-num">/mud-admin</div><div class="stat-label">Grav 1.7 SPA</div></div>
+      <div class="stat"><div class="stat-num">Admin2</div><div class="stat-label">Web component</div></div>
+      <div class="stat"><div class="stat-num">MCP</div><div class="stat-label">Copilot API</div></div>
+    </div>
+  </header>
+
+  <section id="features">
+    <h2>What EvvyTink ships</h2>
+    <div class="grid">
+      <div class="card"><div class="card-icon">✏️</div><h3>Editor + preview</h3><p>CodeMirror `.mud` pane with debounced compile preview — same pipeline as the front-end.</p></div>
+      <div class="card"><div class="card-icon">🚀</div><h3>Publish</h3><p>Save + cache clear in one click. No YAML archaeology.</p></div>
+      <div class="card"><div class="card-icon">🧩</div><h3>Widget Builder</h3><p>Dashboard tiles from MUD fence snippets + system stats.</p></div>
+      <div class="card"><div class="card-icon">🖼️</div><h3>Media + theme</h3><p>Upload/browse images. Theme Expo presets + advanced `@@@` tokens.</p></div>
+      <div class="card"><div class="card-icon">💬</div><h3>Moderation UI</h3><p>Commentz / Forumz queues — pair with <a href="https://gravmud.site/marketplace">Bazaar plugins</a>.</p></div>
+      <div class="card"><div class="card-icon">🤖</div><h3>MUD Copilot</h3><p><code>/api/mud-admin/*</code> for agents — preview before publish.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <div class="install">
+      <p>Requires <strong>grav-mud-alpha</strong> first. Set an access token for API writes.</p>
+      <pre style="text-align: left; max-width: 680px; margin: 0 auto 1.25rem;"><code>bin/gpm direct-install \
+  https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest/download/grav-plugin-grav-mud-admin.zip
+
+# user/config/plugins/grav-mud-admin.yaml
+enabled: true
+access_token: 'your-secret-token'
+
+bin/grav cache</code></pre>
+      <p>Open <strong>/mud-admin</strong> or Admin2 → MUD Editor on Grav 2.0.</p>
+      <a class="btn btn-accent" href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/releases/latest">Download release zip</a>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>GravMUD Admin · EvvyTink</strong> · MIT · FutureVision Labs · Team DC</p>
+    <p>
+      <a href="https://admin.gravmud.site">admin.gravmud.site</a> ·
+      <a href="https://gravmud.site">gravmud.site</a> ·
+      <a href="https://github.com/GravMUD/grav-plugin-grav-mud-admin">GitHub</a> ·
+      <a href="https://github.com/GravMUD/grav-plugin-grav-mud-admin/discussions">Discussions</a> ·
+      <a href="https://alpha.gravmud.site">grav-mud-alpha</a>
+    </p>
+  </footer>
+</body>
+</html>

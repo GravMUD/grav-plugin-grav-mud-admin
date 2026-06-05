@@ -1,0 +1,5 @@
+enabled: false
+route_prefix: mud-admin
+api_prefix: api/mud-admin
+access_token: ''
+require_alpha: true
