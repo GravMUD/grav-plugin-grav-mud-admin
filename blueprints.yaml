@@ -1,7 +1,7 @@
 name: GravMUD Admin
 slug: grav-mud-admin
 type: plugin
-version: 1.5.0-alpha
+version: 1.5.1-alpha
 description: Free MIT MUD-native admin panel with EvvyTink editor. Requires grav-mud-alpha.
 icon: edit
 author:

@@ -1,3 +1,9 @@
+# v1.5.1-alpha
+## 06/06/2026
+
+1. [](#bugfix)
+    * **Critical:** stop duplicate Team DC API routes (`/javabean/*`, `/operator-dock/*`, `/mambo-desktop/*`) when those plugins are enabled — duplicate registration crashed the entire Grav 2 `/api/v1` router (Messenger Giphy, Admin2, etc.). Shims remain via `/api/v1/mud-admin/{subpath}` (`MudTeamDcBridge`).
+
 # v1.5.0-alpha
 ## 06/05/2026
 

@@ -76,47 +76,6 @@ class GravMudAdminPlugin extends Plugin
         $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mud-admin/config', [MudAdminApiBridgeController::class, 'config']);
         $routes->addRoute(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/mud-admin', $controller);
         $routes->addRoute(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], '/mud-admin/{subpath:.+}', $controller);
-
-        $this->registerTeamDcApiRoutes($routes);
-    }
-
-    private function registerTeamDcApiRoutes(\Grav\Plugin\Api\ApiRouteCollector $routes): void
-    {
-        $root = GRAV_ROOT . '/user/plugins';
-
-        $javabean = $root . '/javabean-admin2/classes/JavaBeanApiBridgeController.php';
-        if (is_file($javabean) && (bool) $this->grav['config']->get('plugins.javabean-admin2.enabled', false)) {
-            require_once $root . '/javabean-admin2/classes/JavaBeanLegacy.php';
-            require_once $javabean;
-            $ctrl = \Grav\Plugin\JavaBeanAdmin2\JavaBeanApiBridgeController::class;
-            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/presets', [$ctrl, 'presets']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/fonts', [$ctrl, 'fonts']);
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/javabean/settings', [$ctrl, 'settings']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/javabean/theme.css', [$ctrl, 'themeCss']);
-        }
-
-        $dock = $root . '/operator-dock-admin2/classes/OperatorDockApiBridgeController.php';
-        if (is_file($dock) && (bool) $this->grav['config']->get('plugins.operator-dock-admin2.enabled', false)) {
-            require_once $dock;
-            $ctrl = \Grav\Plugin\OperatorDockAdmin2\OperatorDockApiBridgeController::class;
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/operator-dock/settings', [$ctrl, 'settings']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/operator-dock/launchpad', [$ctrl, 'launchpad']);
-        }
-
-        $mambo = $root . '/mambo-desktop-admin2/classes/DesktopApiBridgeController.php';
-        if (is_file($mambo) && (bool) $this->grav['config']->get('plugins.mambo-desktop-admin2.enabled', false)) {
-            require_once $mambo;
-            $ctrl = \Grav\Plugin\MamboDesktopAdmin2\DesktopApiBridgeController::class;
-            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/bootstrap', [$ctrl, 'bootstrap']);
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/notepad', [$ctrl, 'notepad']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/explorer', [$ctrl, 'explorer']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/vitals', [$ctrl, 'vitals']);
-            $routes->addRoute(['GET', 'OPTIONS'], '/mambo-desktop/recent-pages', [$ctrl, 'recentPages']);
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/maintenance', [$ctrl, 'maintenance']);
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/sticky-notes', [$ctrl, 'stickyNotes']);
-            $routes->addRoute(['GET', 'PATCH', 'OPTIONS'], '/mambo-desktop/wallpaper-prefs', [$ctrl, 'wallpaperPrefs']);
-            $routes->addRoute(['GET', 'POST', 'DELETE', 'OPTIONS'], '/mambo-desktop/wallpaper/custom', [$ctrl, 'wallpaperCustom']);
-        }
     }
 
     public function onApiSidebarItems(Event $event): void
