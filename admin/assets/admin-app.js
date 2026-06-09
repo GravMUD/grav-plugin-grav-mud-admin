@@ -256,6 +256,9 @@
     if (name === 'forumz' && window.GMA && typeof window.GMA.loadForumzPanel === 'function') {
       window.GMA.loadForumzPanel().catch(function (e) { setStatus(e.message, true); });
     }
+    if (name === 'eventz' && window.GMA && typeof window.GMA.loadEventzPanel === 'function') {
+      window.GMA.loadEventzPanel().catch(function (e) { setStatus(e.message, true); });
+    }
     if (name === 'menus' && window.GMA && typeof window.GMA.loadMenuPanel === 'function') {
       window.GMA.loadMenuPanel().catch(function (e) { setStatus(e.message, true); });
     }

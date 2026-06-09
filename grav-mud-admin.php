@@ -6,6 +6,7 @@ use Grav\Common\Plugin;
 use Grav\Plugin\GravMudAdmin\MudAdminApiBridgeController;
 use Grav\Plugin\GravMudAdmin\MudAdminRouter;
 use Grav\Plugin\GravMudAdmin\MudPluginCapabilities;
+use Grav\Plugin\GravMudAdmin\MudSiteMenu;
 use RocketTheme\Toolbox\Event\Event;
 
 class GravMudAdminPlugin extends Plugin
@@ -220,3 +221,5 @@ class GravMudAdminPlugin extends Plugin
         return class_exists(\Grav\Plugin\Api\ApiRouteCollector::class);
     }
 }
+
+return new GravMudAdminPlugin($name, $grav);

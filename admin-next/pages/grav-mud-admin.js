@@ -17,19 +17,43 @@
     media: 'Media',
     feeds: 'RSS Feeds',
   };
+  const TAB =
+    'evvy-tab -mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground';
+  const TAB_ON =
+    'evvy-tab -mb-px border-b-2 border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors';
+  const BTN =
+    'inline-flex items-center rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold hover:bg-accent';
+  const BTN_PRI =
+    'inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90';
+  const BTN_DANGER =
+    'inline-flex items-center rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20';
 
   function apiConfig() {
+    const cfg = window.__GRAV_CONFIG__ || {};
+    let serverUrl = window.__GRAV_API_SERVER_URL || cfg.serverUrl || '';
+    const apiPrefix = window.__GRAV_API_PREFIX || cfg.apiPrefix || '/api/v1';
+    const basePath = (cfg.basePath || '/admin').replace(/\/+$/, '');
+    serverUrl = String(serverUrl).replace(/\/+$/, '');
+    // Admin2 boot sometimes bakes /admin into serverUrl — API lives at site root.
+    if (basePath && serverUrl.endsWith(basePath)) {
+      serverUrl = serverUrl.slice(0, -basePath.length);
+    }
     return {
-      serverUrl: window.__GRAV_API_SERVER_URL || window.__GRAV_CONFIG__?.serverUrl || '',
-      apiPrefix: window.__GRAV_API_PREFIX || window.__GRAV_CONFIG__?.apiPrefix || '/api/v1',
+      serverUrl,
+      apiPrefix,
       token: window.__GRAV_API_TOKEN || null,
     };
   }
 
   function apiUrl(path) {
     const cfg = apiConfig();
-    const base = `${cfg.serverUrl}${cfg.apiPrefix}`.replace(/\/+$/, '');
-    return `${base}/mud-admin${path.startsWith('/') ? path : `/${path}`}`;
+    const prefix = String(cfg.apiPrefix || '/api/v1').replace(/\/+$/, '');
+    const p = path.startsWith('/') ? path : `/${path}`;
+    const mudPath = `${prefix}/mud-admin${p}`;
+    if (cfg.serverUrl) {
+      return `${cfg.serverUrl}${mudPath}`;
+    }
+    return mudPath;
   }
 
   async function mudApi(path, options = {}) {
@@ -44,14 +68,17 @@
 
     const res = await fetch(apiUrl(path), { ...options, headers, credentials: 'include' });
     const text = await res.text();
-    let data;
+    let json;
     try {
-      data = text ? JSON.parse(text) : {};
+      json = text ? JSON.parse(text) : {};
     } catch {
       throw new Error('Invalid MUD admin response');
     }
+    const data = json.data !== undefined ? json.data : json;
     if (!res.ok || data.ok === false) {
-      throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      throw new Error(
+        data.detail || data.error || data.message || json.detail || json.title || `HTTP ${res.status}`
+      );
     }
     return data;
   }
@@ -106,19 +133,6 @@
       font-family: var(--font-sans, system-ui, sans-serif);
       color: var(--foreground, #e2e8f0);
     }
-    .evvy-shell { display: grid; grid-template-rows: auto auto 1fr auto; height: 100%; gap: 0.65rem; }
-    .evvy-brand { font-weight: 700; letter-spacing: 0.02em; }
-    .evvy-brand small { font-weight: 500; opacity: 0.65; margin-left: 0.5rem; }
-    .evvy-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    .evvy-tab {
-      appearance: none; border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-      background: transparent; color: inherit; border-radius: 999px; padding: 0.35rem 0.85rem;
-      font: inherit; font-size: 0.88rem; cursor: pointer;
-    }
-    .evvy-tab.active {
-      background: hsl(var(--primary, 24 95% 53%) / 0.16);
-      border-color: hsl(var(--primary, 24 95% 53%) / 0.45);
-    }
     .evvy-view { display: none; min-height: 0; height: 100%; overflow: auto; }
     .evvy-view.active { display: block; }
     .evvy-btn {
@@ -158,7 +172,7 @@
       font: 0.82rem/1.35 ui-monospace, monospace; cursor: pointer;
     }
     .evvy-page-list button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .evvy-page-list button.active { background: hsl(var(--primary, 24 95% 53%) / 0.16); }
+    .evvy-page-list button.active { background: hsl(var(--primary, 24 95% 53%) / 0.16); color: hsl(var(--primary, 24 95% 53%)); }
     .evvy-textarea, .evvy-input, .evvy-select {
       width: 100%; border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
       background: color-mix(in srgb, currentColor 4%, transparent); color: inherit;
@@ -168,7 +182,22 @@
       flex: 1; min-height: 12rem; resize: vertical;
       font: 0.82rem/1.45 ui-monospace, monospace; border: 0; border-radius: 0;
     }
-    .evvy-preview { flex: 1; min-height: 12rem; border: 0; width: 100%; background: #fff; }
+    .evvy-preview { flex: 1; min-height: 12rem; border: 0; width: 100%; background: #0a0a0c; }
+    .evvy-preview-toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .evvy-preview-fs {
+      border: 0; background: transparent; color: inherit; cursor: pointer;
+      font: 0.72rem/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.02em;
+      opacity: 0.75; padding: 0.2rem 0.45rem; border-radius: 0.35rem;
+    }
+    .evvy-preview-fs:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .evvy-preview-panel.is-fullscreen {
+      position: fixed; inset: 0; z-index: 99999; margin: 0 !important;
+      background: hsl(var(--background, 0 0% 7%)); border-radius: 0 !important;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .evvy-preview-panel.is-fullscreen .evvy-preview { flex: 1; min-height: 0; }
     .evvy-menu-layout { display: grid; grid-template-columns: 1fr 18rem; gap: 0.75rem; min-height: 20rem; }
     @media (max-width: 800px) { .evvy-menu-layout { grid-template-columns: 1fr; } }
     .evvy-menu-row {
@@ -314,13 +343,17 @@
     }
 
     _renderShell() {
+      this.className = 'block h-full min-h-[28rem] text-foreground';
       this.innerHTML = `
         <style>${STYLES}</style>
-        <div class="evvy-shell">
-          <div class="evvy-brand">EvvyTink <small>GravMUD Admin · Admin2</small></div>
-          <nav class="evvy-tabs" data-tabs></nav>
-          <div data-views></div>
-          <p class="evvy-status" data-status></p>
+        <div class="flex h-full min-h-[28rem] flex-col">
+          <header class="shrink-0 border-b border-border px-6 pb-0 pt-5">
+            <h2 class="text-lg font-bold">EvvyTink</h2>
+            <p class="mt-0.5 text-sm text-muted-foreground">GravMUD Admin · .mud editor · menus · media</p>
+            <nav class="mt-4 flex shrink-0 flex-wrap" data-tabs role="tablist"></nav>
+          </header>
+          <div class="min-h-0 flex-1 overflow-hidden px-6 py-4" data-views></div>
+          <p class="evvy-status shrink-0 px-6 pb-3 text-xs text-muted-foreground" data-status></p>
         </div>
       `;
       this._els = {
@@ -332,7 +365,8 @@
       ALL_VIEWS.forEach((id) => {
         const tab = document.createElement('button');
         tab.type = 'button';
-        tab.className = 'evvy-tab';
+        tab.role = 'tab';
+        tab.className = TAB;
         tab.dataset.view = id;
         tab.textContent = TAB_LABELS[id] || id;
         tab.addEventListener('click', () => this._switchView(id));
@@ -348,6 +382,8 @@
     _setStatus(msg, err = false) {
       this._els.status.textContent = msg || '';
       this._els.status.classList.toggle('err', Boolean(err));
+      this._els.status.classList.toggle('text-destructive', Boolean(err));
+      this._els.status.classList.toggle('text-muted-foreground', !err);
     }
 
     _viewEl(id) {
@@ -363,7 +399,7 @@
         if (location.hash !== next) history.replaceState(null, '', next);
       }
       this._els.tabs.querySelectorAll('.evvy-tab').forEach((t) => {
-        t.classList.toggle('active', t.dataset.view === id);
+        t.className = t.dataset.view === id ? TAB_ON : TAB;
       });
       this._els.views.querySelectorAll('.evvy-view').forEach((v) => {
         v.classList.toggle('active', v.dataset.view === id);
@@ -388,38 +424,55 @@
       if (root.dataset.mounted) return;
       root.dataset.mounted = '1';
       root.innerHTML = `
-        <div class="evvy-toolbar">
-          <span data-path class="evvy-muted"></span>
-          <label class="evvy-muted"><input type="checkbox" data-live checked> Live preview</label>
-          <button type="button" class="evvy-btn" data-insert-image>Insert image</button>
-          <button type="button" class="evvy-btn" data-new>New page</button>
-          <button type="button" class="evvy-btn" data-preview>Preview</button>
-          <button type="button" class="evvy-btn" data-save>Save</button>
-          <button type="button" class="evvy-btn evvy-btn-primary" data-publish>Publish</button>
+        <div class="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
+          <span data-path class="text-sm font-medium text-foreground"></span>
+          <label class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><input type="checkbox" data-live checked class="rounded border-border"> Live preview</label>
+          <button type="button" class="${BTN}" data-insert-image>Insert image</button>
+          <button type="button" class="${BTN}" data-new>New page</button>
+          <button type="button" class="${BTN}" data-preview-btn>Preview</button>
+          <button type="button" class="${BTN}" data-save>Save</button>
+          <button type="button" class="${BTN_PRI}" data-publish>Publish</button>
         </div>
         <div class="evvy-editor-panels">
-          <div class="evvy-pane evvy-pane-col">
-            <div class="evvy-pane-label">.mud pages</div>
+          <div class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-muted/10">
+            <div class="border-b border-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">.mud pages</div>
             <ul class="evvy-page-list" data-pages></ul>
           </div>
-          <div class="evvy-pane evvy-pane-col">
-            <div class="evvy-pane-label">Source</div>
+          <div class="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-muted/10">
+            <div class="border-b border-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Source</div>
             <textarea class="evvy-textarea" data-editor spellcheck="false" placeholder="Select a page…"></textarea>
           </div>
-          <div class="evvy-pane evvy-pane-col">
-            <div class="evvy-pane-label">Compiled preview</div>
-            <iframe class="evvy-preview" data-preview title="MUD preview"></iframe>
+          <div class="evvy-pane-col flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-muted/10 evvy-preview-panel" data-preview-panel>
+            <div class="evvy-pane-label evvy-preview-toolbar border-b border-border px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <span>Compiled preview</span>
+              <button type="button" class="evvy-preview-fs" data-preview-fullscreen title="Fullscreen preview (Esc to exit)">Fullscreen</button>
+            </div>
+            <iframe class="evvy-preview min-h-0 flex-1 border-0 bg-[#0a0a0c]" data-preview-frame title="MUD preview" sandbox="allow-same-origin allow-scripts"></iframe>
           </div>
         </div>
       `;
 
       const pages = root.querySelector('[data-pages]');
       const editor = root.querySelector('[data-editor]');
-      const preview = root.querySelector('[data-preview]');
+      const preview = root.querySelector('[data-preview-frame]');
+      const previewPanel = root.querySelector('[data-preview-panel]');
+      const previewFs = root.querySelector('[data-preview-fullscreen]');
       const pathEl = root.querySelector('[data-path]');
       const live = root.querySelector('[data-live]');
 
-      root.querySelector('[data-preview]').addEventListener('click', () => {
+      previewFs.addEventListener('click', () => this._togglePreviewFullscreen(previewPanel, previewFs));
+      if (!this._previewFsBound) {
+        this._previewFsBound = true;
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          const panel = this._editorUi?.previewPanel;
+          if (panel?.classList.contains('is-fullscreen')) {
+            this._togglePreviewFullscreen(panel, this._editorUi?.previewFs, false);
+          }
+        });
+      }
+
+      root.querySelector('[data-preview-btn]').addEventListener('click', () => {
         this._editorPreview(editor, preview).catch((e) => this._setStatus(e.message, true));
       });
       root.querySelector('[data-save]').addEventListener('click', () => {
@@ -447,21 +500,40 @@
         this._scheduleEditorPreview(editor, preview);
       });
 
-      this._editorUi = { pages, editor, preview, pathEl };
+      this._editorUi = { pages, editor, preview, previewPanel, previewFs, pathEl };
       await this._loadEditorPages();
+      if (!this._editor.path && this._editor.pages.length) {
+        const firstBtn = pages.querySelector('button');
+        if (firstBtn) {
+          await this._openEditorPage(this._editor.pages[0].path, firstBtn);
+        }
+      }
+    }
+
+    _togglePreviewFullscreen(panel, btn, force) {
+      if (!panel) return;
+      const on = force === undefined ? !panel.classList.contains('is-fullscreen') : force;
+      panel.classList.toggle('is-fullscreen', on);
+      if (btn) btn.textContent = on ? 'Exit fullscreen' : 'Fullscreen';
+      document.body.style.overflow = on ? 'hidden' : '';
     }
 
     _scheduleEditorPreview(editor, preview) {
       if (!this._editor.live) return;
       clearTimeout(this._editor.timer);
       this._editor.timer = setTimeout(() => {
-        this._editorPreview(editor, preview).catch(() => {});
+        this._editorPreview(editor, preview).catch((e) => this._setStatus(e.message, true));
       }, PREVIEW_MS);
     }
 
     async _loadEditorPages(selectPath) {
+      try {
+        this._status = await mudApi('/status');
+      } catch (_) {
+        this._status = {};
+      }
       const data = await mudApi('/pages');
-      this._editor.pages = data.pages || [];
+      this._editor.pages = (data.pages || []).filter((page) => /\.mud$/i.test(page.path || ''));
       const { pages } = this._editorUi;
       pages.innerHTML = '';
       this._editor.pages.forEach((page) => {
@@ -469,11 +541,22 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = page.path;
-        btn.addEventListener('click', () => this._openEditorPage(page.path, btn));
+        btn.addEventListener('click', () => {
+          this._openEditorPage(page.path, btn).catch((e) => this._setStatus(e.message, true));
+        });
         li.appendChild(btn);
         pages.appendChild(li);
         if (selectPath && page.path === selectPath) this._openEditorPage(page.path, btn);
       });
+      if (!this._editor.pages.length) {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-2 text-xs leading-relaxed text-muted-foreground';
+        const profile = this._status?.siteProfile || '';
+        li.textContent = profile === 'campaign'
+          ? 'GetGRAV! campaign site — no .mud pages here. Edit HTML in goggrav/public. For MUD pages use grav-site (:8090) or an FVHost tenant.'
+          : 'No .mud pages in user/pages yet. Create one or sync your site tree.';
+        pages.appendChild(li);
+      }
       this._setStatus(`${this._editor.pages.length} .mud pages`);
     }
 
@@ -486,15 +569,28 @@
       editor.value = data.source || '';
       pathEl.textContent = data.path;
       this._editor.dirty = false;
-      this._setStatus(`Loaded ${data.path}`);
+      this._setStatus(`Loaded ${data.path} — compiling preview…`);
       await this._editorPreview(editor, preview);
+      this._setStatus(`Preview ready · ${data.path}`);
     }
 
     async _editorPreview(editor, preview) {
+      if (!preview || preview.tagName !== 'IFRAME') return;
       const source = editor.value;
-      if (!source.trim()) return;
+      if (!source.trim()) {
+        const doc = preview.contentDocument || preview.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write('<!DOCTYPE html><html><body style="margin:0;background:#0a0a0c;color:#888;font:12px/1.4 sans-serif;padding:1rem">Select a page or add MUD source…</body></html>');
+          doc.close();
+        }
+        return;
+      }
       const data = await mudApi('/preview', { method: 'POST', body: JSON.stringify({ source }) });
-      const doc = preview.contentDocument || preview.contentWindow.document;
+      const win = preview.contentWindow;
+      if (!win) return;
+      const doc = preview.contentDocument || win.document;
+      if (!doc) return;
       doc.open();
       doc.write(data.html || '');
       doc.close();
@@ -903,7 +999,7 @@
             <button type="button" class="evvy-btn evvy-btn-primary" data-apply>Apply preset</button>
           </div>
           <div class="evvy-theme-grid" data-presets></div>
-          <iframe class="evvy-preview" data-preview style="min-height:14rem;width:100%;border:0;background:#fff"></iframe>
+          <iframe class="evvy-preview" data-preview style="min-height:14rem;width:100%;border:0;background:#0a0a0c"></iframe>
         `;
         root.querySelector('[data-page]').addEventListener('change', () => {
           this._loadThemePanel().catch((e) => this._setStatus(e.message, true));
@@ -917,11 +1013,12 @@
           preview: root.querySelector('[data-preview]'),
         };
       }
-      const pages = await mudApi('/pages');
+      const data = await mudApi('/pages');
+      const mudPages = (data.pages || []).filter((p) => /\.mud$/i.test(p.path || ''));
       const sel = this._themeUi.page;
       const prev = sel.value;
-      sel.innerHTML = (pages.pages || []).map((p) => `<option value="${esc(p.path)}">${esc(p.path)}</option>`).join('');
-      sel.value = prev || this._editor.path || pages.pages?.[0]?.path || '';
+      sel.innerHTML = mudPages.map((p) => `<option value="${esc(p.path)}">${esc(p.path)}</option>`).join('');
+      sel.value = prev || this._editor.path || mudPages[0]?.path || '';
       await this._loadThemePanel();
     }
 

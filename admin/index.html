@@ -49,6 +49,9 @@
       <a href="#/forumz" class="gma-nav-link" data-view="forumz">
         <span class="gma-nav-icon">💬</span> Forumz
       </a>
+      <a href="#/eventz" class="gma-nav-link" data-view="eventz">
+        <span class="gma-nav-icon">📅</span> Eventz
+      </a>
     </nav>
 
     <div class="gma-main">
@@ -258,6 +261,32 @@
           <ul id="forumz-profiles-list" class="gma-feed-list gma-forumz-profiles"></ul>
         </div>
       </section>
+
+      <!-- Eventz RSVP admin -->
+      <section id="view-eventz" class="gma-view hidden">
+        <div class="gma-view-head">
+          <h1 class="gma-view-title">Eventz · RSVP</h1>
+          <button type="button" id="btn-eventz-refresh" class="gma-btn gma-btn-small">Refresh</button>
+        </div>
+        <p class="gma-muted">Flat-file meetups from <code>user/data/mud-eventz/</code> — list RSVPs, export CSV, close/open RSVP. Andy-safe.</p>
+
+        <div id="eventz-stats-bar" class="gma-eventz-stats"></div>
+
+        <div class="gma-eventz-layout">
+          <aside class="gma-eventz-sidebar">
+            <h2>Events</h2>
+            <ul id="eventz-events-list" class="gma-feed-list gma-eventz-events"></ul>
+          </aside>
+          <section class="gma-eventz-main">
+            <div class="gma-actions-inline">
+              <button type="button" id="btn-eventz-export-csv" class="gma-btn gma-btn-small">Export CSV</button>
+              <button type="button" id="btn-eventz-close-rsvp" class="gma-btn gma-btn-small">Close RSVP</button>
+              <button type="button" id="btn-eventz-open-rsvp" class="gma-btn gma-btn-small">Reopen RSVP</button>
+            </div>
+            <ul id="eventz-rsvps-list" class="gma-feed-list gma-eventz-rsvps"></ul>
+          </section>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -318,6 +347,7 @@
   <script src="/user/plugins/grav-mud-admin/admin/assets/admin-app.js"></script>
   <script src="/user/plugins/grav-mud-admin/admin/assets/menus-admin.js"></script>
   <script src="/user/plugins/grav-mud-admin/admin/assets/forumz-admin.js"></script>
+  <script src="/user/plugins/grav-mud-admin/admin/assets/eventz-admin.js"></script>
   <script src="/user/plugins/grav-mud-admin/admin/assets/widget-builder.js"></script>
 </body>
 </html>

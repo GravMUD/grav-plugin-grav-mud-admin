@@ -119,6 +119,8 @@
         return stats.commentz && stats.commentz.total != null ? stats.commentz.total : '—';
       case 'forumz':
         return stats.forumz && stats.forumz.threads != null ? stats.forumz.threads : '—';
+      case 'eventz':
+        return stats.eventz && stats.eventz.rsvps != null ? stats.eventz.rsvps : '—';
       default:
         return '—';
     }
@@ -136,6 +138,11 @@
       var fp = stats.forumz && stats.forumz.pending != null ? stats.forumz.pending : 0;
       var prof = stats.forumz && stats.forumz.profiles != null ? stats.forumz.profiles : 0;
       return fp + ' pending · ' + prof + ' profiles';
+    }
+    if (key === 'eventz') {
+      var heads = stats.eventz && stats.eventz.headcount != null ? stats.eventz.headcount : 0;
+      var open = stats.eventz && stats.eventz.open != null ? stats.eventz.open : 0;
+      return heads + ' headcount · ' + open + ' open';
     }
     return '';
   }

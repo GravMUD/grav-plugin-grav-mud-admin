@@ -22,7 +22,20 @@ class MudAdminApi
     {
         $this->grav = $grav;
         $this->config = $config;
-        $this->pagesRoot = $this->realUserPath('pages');
+        $this->pagesRoot = $this->resolveConfiguredPagesRoot();
+    }
+
+    private function resolveConfiguredPagesRoot(): string
+    {
+        $custom = trim((string) ($this->config['pages_root'] ?? ''));
+        if ($custom === '' || str_starts_with($custom, '@')) {
+            return $this->realUserPath('pages');
+        }
+        if ($custom[0] === '/' || preg_match('#^[A-Za-z]:[/\\\\]#', $custom)) {
+            return rtrim($custom, '/\\');
+        }
+
+        return $this->realUserPath(ltrim($custom, '/'));
     }
 
     /** @param array<string, mixed> $body */
@@ -209,6 +222,53 @@ class MudAdminApi
                 $this->respond($this->forumzProfiles());
                 return;
             }
+            if ($sub === 'eventz/events' && $method === 'GET') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzEvents());
+                return;
+            }
+            if (preg_match('#^eventz/rsvps/([a-z0-9_-]+)$#', $sub, $m) && $method === 'GET') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzRsvps($m[1]));
+                return;
+            }
+            if (preg_match('#^eventz/rsvps/([a-z0-9_-]+)/csv$#', $sub, $m) && $method === 'GET') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzRsvpCsv($m[1]));
+                return;
+            }
+            if (preg_match('#^eventz/event/([a-z0-9_-]+)/rsvp-open$#', $sub, $m) && $method === 'POST') {
+                $this->requireAuth($method);
+                $body = $this->readJsonBody();
+                $open = !array_key_exists('open', $body) || !empty($body['open']);
+                $this->respond($this->eventzSetRsvpOpen($m[1], $open));
+                return;
+            }
+            if ($sub === 'eventz/event' && $method === 'POST') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzSaveEvent($this->readJsonBody()));
+                return;
+            }
+            if ($sub === 'eventz/chapters' && $method === 'GET') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzChapters());
+                return;
+            }
+            if ($sub === 'eventz/chapters' && $method === 'POST') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzSaveChapter($this->readJsonBody()));
+                return;
+            }
+            if (preg_match('#^eventz/chapters/([a-z0-9_-]+)$#', $sub, $m) && $method === 'GET') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzChapter($m[1]));
+                return;
+            }
+            if (preg_match('#^eventz/chapters/([a-z0-9_-]+)/spawn$#', $sub, $m) && $method === 'POST') {
+                $this->requireAuth($method);
+                $this->respond($this->eventzSpawnChapter($m[1], $this->readJsonBody()));
+                return;
+            }
             if ($sub === 'menu' && $method === 'GET') {
                 $this->requireAuth($method);
                 $this->respond($this->readMenu());
@@ -233,6 +293,13 @@ class MudAdminApi
         } catch (\InvalidArgumentException $e) {
             $this->fail($e->getMessage(), 400);
         } catch (\Throwable $e) {
+            $this->grav['log']->error('[grav-mud-admin] ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            if ($this->grav['config']->get('system.debugger.enabled')) {
+                $this->grav['log']->error('[grav-mud-admin] ' . $e->getTraceAsString());
+            }
             $this->fail('Admin tribble malfunction.', 500);
         }
     }
@@ -260,6 +327,8 @@ class MudAdminApi
             'alpha' => $this->alphaInstalled(),
             'authRequired' => trim((string) ($this->config['access_token'] ?? '')) !== '',
             'pagesRoot' => $this->pagesRoot,
+            'pageCount' => count($this->listMudPages()),
+            'siteProfile' => trim((string) ($this->config['site_profile'] ?? 'mud')),
             'layouts' => ['promo', 'expose', 'docs', 'services', 'blog'],
         ];
     }
@@ -296,6 +365,7 @@ class MudAdminApi
         }
 
         usort($out, static fn(array $a, array $b): int => strcmp($a['path'], $b['path']));
+
         return $out;
     }
 
@@ -422,16 +492,140 @@ class MudAdminApi
             throw new \InvalidArgumentException('source required');
         }
 
-        require_once GRAV_ROOT . '/user/plugins/grav-mud-alpha/classes/MudAlphaCompiler.php';
-        $compiler = new \Grav\Plugin\GravMudAlpha\MudAlphaCompiler();
-        $theme = (string) $this->grav['config']->get('system.pages.theme', 'grav-mud-site');
-        $themeUrl = $this->grav['base_url'] . '/user/themes/' . $theme . '/images';
-        $compiler->setAssetBase($themeUrl);
+        $design = $this->parseDesignBlock($source);
+        $compiler = $this->configureMudCompiler();
+        $body = $compiler->compile($source);
+        $fields = is_array($design['fields'] ?? null) ? $design['fields'] : [];
 
         return [
             'ok' => true,
-            'html' => $compiler->compile($source),
+            'html' => $this->wrapMudPreviewDocument($body, $fields),
         ];
+    }
+
+    private function configureMudCompiler(): \Grav\Plugin\GravMudAlpha\MudAlphaCompiler
+    {
+        require_once GRAV_ROOT . '/user/plugins/grav-mud-alpha/classes/MudAlphaCompiler.php';
+        $compiler = new \Grav\Plugin\GravMudAlpha\MudAlphaCompiler();
+        $theme = $this->activeTheme();
+        $compiler->setAssetBase($this->gravBaseUrl() . '/user/themes/' . $theme . '/images');
+
+        if ($this->grav['config']->get('plugins.grav-mud-forumz.enabled')) {
+            $forumRoute = trim((string) $this->grav['config']->get('plugins.grav-mud-forumz.api_route', 'api/mud-forumz'), '/');
+            $compiler->setForumApiBase('/' . $forumRoute);
+        }
+        if ($this->grav['config']->get('plugins.grav-mud-commentz.enabled')) {
+            $commentRoute = trim((string) $this->grav['config']->get('plugins.grav-mud-commentz.api_route', 'api/mud-commentz'), '/');
+            $compiler->setCommentApiBase('/' . $commentRoute);
+        }
+        if ($this->grav['config']->get('plugins.grav-mud-messenger.enabled')) {
+            $messengerRoute = trim((string) $this->grav['config']->get('plugins.grav-mud-messenger.api_route', 'api/mud-messenger'), '/');
+            $compiler->setMessengerApiBase('/' . $messengerRoute);
+        }
+        if ($this->grav['config']->get('plugins.grav-mud-marketplace.enabled')) {
+            $shopRoute = trim((string) $this->grav['config']->get('plugins.grav-mud-marketplace.route_prefix', 'shop'), '/');
+            $compiler->setMarketplaceRoute($shopRoute);
+        }
+        $flipBase = trim((string) $this->grav['config']->get('theme.flipzine.base_url', ''));
+        if ($flipBase !== '') {
+            $compiler->setFlipzineBase($flipBase);
+        }
+        $flipSlug = trim((string) $this->grav['config']->get('theme.flipzine.default_slug', ''));
+        if ($flipSlug !== '') {
+            $compiler->setFlipzineDefaultSlug($flipSlug);
+        }
+        if ($this->grav['config']->get('plugins.grav-mud-swag-store.enabled')) {
+            $swagRoute = trim((string) $this->grav['config']->get('plugins.grav-mud-swag-store.route_prefix', 'shop'), '/');
+            $compiler->setSwagRoute($swagRoute);
+        }
+
+        $compiler->setGrav($this->grav);
+
+        return $compiler;
+    }
+
+    /** @param array<string, mixed> $designFields */
+    private function wrapMudPreviewDocument(string $body, array $designFields = []): string
+    {
+        $baseUrl = $this->gravBaseUrl();
+        $theme = $this->activeTheme();
+        $preset = trim((string) ($designFields['name'] ?? 'grav-official'));
+        if ($preset === '') {
+            $preset = 'grav-official';
+        }
+        $presetClass = preg_replace('/[^a-z0-9_-]/i', '', $preset) ?: 'grav-official';
+        $isGetgrav = $presetClass === 'getgrav' || str_starts_with($presetClass, 'getgrav');
+
+        $styles = [];
+        if (!$isGetgrav) {
+            $styles[] = $baseUrl . '/user/themes/grav-mud-site/css/grav-mud.css';
+        }
+        if ($theme !== 'grav-mud-site') {
+            $styles[] = $baseUrl . '/user/themes/' . $theme . '/css/' . $theme . '.css';
+        }
+        if ($isGetgrav) {
+            $styles[] = $baseUrl . '/assets/goggrav.css';
+        }
+
+        $links = '';
+        foreach ($styles as $href) {
+            $links .= '<link rel="stylesheet" href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '">';
+        }
+
+        $fonts = '<link rel="preconnect" href="https://fonts.googleapis.com">'
+            . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+            . '<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">';
+
+        $bodyClass = 'mud-spec-body mud-site-preset--' . $presetClass;
+        if ($isGetgrav) {
+            $bodyClass = 'gg-body ' . $bodyClass;
+        }
+
+        $previewCss = '';
+        if ($isGetgrav) {
+            $previewCss = 'html,body{margin:0;min-height:100%;background:var(--gg-bg,#07101c)!important;color:var(--gg-text,#f4f7fb)}'
+                . '#gg-starfield{position:fixed;inset:0;z-index:0;pointer-events:none;width:100%;height:100%}'
+                . '.gg-wrap,.gg-main,.mud-content{position:relative;z-index:1}'
+                . 'body.gg-body .mud-page,body.gg-body .mud-page--getgrav{background:transparent!important;color:var(--gg-text);'
+                . '--bg:transparent;--bg-card:var(--gg-panel-solid,#101c30);--text:var(--gg-text);--muted:var(--gg-muted);'
+                . '--accent:var(--gg-red);--border:var(--gg-border);box-shadow:none;border:0;padding:0;max-width:none}'
+                . '.site-main{padding:0}.mud-content{min-height:12rem}';
+        } else {
+            $previewCss = 'html,body{margin:0;min-height:100%;background:var(--bg,#0a0a0c);color:var(--text,#e8e8ec)}'
+                . '.site-main{padding:0}.mud-content{min-height:12rem}';
+        }
+
+        $shellOpen = '<main class="site-main"><div class="mud-content">';
+        $shellClose = '</div></main>';
+        if ($isGetgrav) {
+            $shellOpen = '<div class="gg-planetoids" aria-hidden="true">'
+                . '<div class="gg-planet gg-planet--blue"></div>'
+                . '<div class="gg-planet gg-planet--red"></div>'
+                . '<div class="gg-planet gg-planet--moon"></div>'
+                . '</div>'
+                . '<canvas id="gg-starfield" aria-hidden="true"></canvas>'
+                . '<div class="gg-wrap"><main class="gg-main"><div class="mud-content getgrav-mud-content">';
+            $shellClose = '</div></main></div>';
+        }
+
+        $scripts = '';
+        if ($isGetgrav) {
+            $scripts = '<script>window.GRAVMUD_GOGGRAV_PREFIX="";window.GRAVMUD_GOGGRAV_API="/api/v1/goggrav";</script>'
+                . '<script src="' . htmlspecialchars($baseUrl . '/assets/goggrav-starfield.js', ENT_QUOTES, 'UTF-8') . '"></script>'
+                . '<script src="' . htmlspecialchars($baseUrl . '/assets/goggrav-app.js', ENT_QUOTES, 'UTF-8') . '"></script>'
+                . '<script src="' . htmlspecialchars($baseUrl . '/assets/goggrav-anthem.js', ENT_QUOTES, 'UTF-8') . '"></script>'
+                . '<script src="' . htmlspecialchars($baseUrl . '/user/themes/grav-mud-getgrav/js/getgrav-init.js', ENT_QUOTES, 'UTF-8') . '"></script>';
+        }
+
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<base href="' . htmlspecialchars($baseUrl . '/', ENT_QUOTES, 'UTF-8') . '">'
+            . $fonts . $links
+            . '<style>' . $previewCss . '</style>'
+            . '</head><body class="' . htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8') . '">'
+            . $shellOpen . $body . $shellClose
+            . $scripts
+            . '</body></html>';
     }
 
     /** @return array<string, mixed> */
@@ -626,6 +820,7 @@ MUD;
         if ($relPath === '' || str_contains($relPath, '..')) {
             throw new \InvalidArgumentException('Invalid page path.');
         }
+
         if (!str_ends_with(strtolower($relPath), '.mud')) {
             $relPath .= '.mud';
         }
@@ -659,6 +854,7 @@ MUD;
         if (str_starts_with($absolute, $root)) {
             return ltrim(substr($absolute, strlen($root)), '/');
         }
+
         return $absolute;
     }
 
@@ -1075,12 +1271,9 @@ MUD;
             throw new \RuntimeException('Theme preview source missing.');
         }
 
-        require_once GRAV_ROOT . '/user/plugins/grav-mud-alpha/classes/MudAlphaCompiler.php';
-        $compiler = new \Grav\Plugin\GravMudAlpha\MudAlphaCompiler();
-        $theme = $this->activeTheme();
-        $compiler->setAssetBase($this->grav['base_url'] . '/user/themes/' . $theme . '/images');
+        $compiler = $this->configureMudCompiler();
         $html = $compiler->compile($source);
-        $cssUrl = $this->grav['base_url'] . '/user/themes/' . $theme . '/css/grav-mud.css';
+        $cssUrl = $this->gravBaseUrl() . '/user/themes/' . $this->activeTheme() . '/css/grav-mud.css';
 
         return [
             'ok' => true,
@@ -1100,6 +1293,7 @@ MUD;
         $spark = $this->publishSparkline($publishLog, 7);
         $commentz = $this->commentzStats();
         $forumz = $this->forumzStats();
+        $eventz = $this->eventzStats();
 
         return [
             'ok' => true,
@@ -1111,6 +1305,7 @@ MUD;
             ],
             'commentz' => $commentz,
             'forumz' => $forumz,
+            'eventz' => $eventz,
             'publish' => [
                 'total' => count($publishLog),
                 'recent' => array_slice($publishLog, 0, 8),
@@ -1251,6 +1446,133 @@ MUD;
         return new \Grav\Plugin\GravMudForumz\MudForumzStorage($this->grav);
     }
 
+    private function eventzInstalled(): bool
+    {
+        return is_file(GRAV_ROOT . '/user/plugins/grav-mud-eventz/classes/MudEventzStorage.php');
+    }
+
+    private function eventzStorage(): \Grav\Plugin\GravMudEventz\MudEventzStorage
+    {
+        require_once GRAV_ROOT . '/user/plugins/grav-mud-eventz/classes/MudEventzRsvp.php';
+        require_once GRAV_ROOT . '/user/plugins/grav-mud-eventz/classes/MudEventzStorage.php';
+
+        return new \Grav\Plugin\GravMudEventz\MudEventzStorage($this->grav);
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzStats(): array
+    {
+        if (!$this->eventzInstalled()) {
+            return ['events' => 0, 'open' => 0, 'rsvps' => 0, 'headcount' => 0];
+        }
+
+        return $this->eventzStorage()->stats();
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzEvents(): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzStorage()->listEvents();
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzRsvps(string $slug): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzStorage()->listRsvpEntries($slug);
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzRsvpCsv(string $slug): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        $slug = preg_replace('/[^a-z0-9_-]/', '', strtolower($slug)) ?? 'event';
+
+        return [
+            'ok' => true,
+            'filename' => $slug . '-rsvps.csv',
+            'csv' => $this->eventzStorage()->exportRsvpCsv($slug),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzSetRsvpOpen(string $slug, bool $open): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzStorage()->setRsvpOpen($slug, $open);
+    }
+
+    /** @param array<string, mixed> $payload @return array<string, mixed> */
+    private function eventzSaveEvent(array $payload): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzStorage()->saveEvent($payload, ($payload['wire'] ?? true) !== false);
+    }
+
+    private function eventzChaptersApi(): \Grav\Plugin\GravMudEventz\MudEventzChapters
+    {
+        require_once GRAV_ROOT . '/user/plugins/grav-mud-eventz/classes/MudEventzChapters.php';
+        require_once GRAV_ROOT . '/user/plugins/grav-mud-eventz/classes/MudEventzRecurrence.php';
+
+        return new \Grav\Plugin\GravMudEventz\MudEventzChapters($this->grav, $this->eventzStorage());
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzChapters(): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzChaptersApi()->listChapters();
+    }
+
+    /** @return array<string, mixed> */
+    private function eventzChapter(string $slug): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzChaptersApi()->getChapter($slug, true);
+    }
+
+    /** @param array<string, mixed> $payload @return array<string, mixed> */
+    private function eventzSaveChapter(array $payload): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzChaptersApi()->saveChapter($payload);
+    }
+
+    /** @param array<string, mixed> $payload @return array<string, mixed> */
+    private function eventzSpawnChapter(string $slug, array $payload): array
+    {
+        if (!$this->eventzInstalled()) {
+            throw new \InvalidArgumentException('grav-mud-eventz not installed.');
+        }
+
+        return $this->eventzChaptersApi()->spawnOccurrences($slug, $payload);
+    }
+
     /** @return array<string, mixed> */
     private function readMenu(): array
     {
@@ -1287,10 +1609,17 @@ MUD;
         $menu = new MudSiteMenu($this->grav);
         $synced = $menu->syncFromPages();
         $this->clearCache();
+        $preview = null;
+        try {
+            $preview = $menu->forTwig();
+        } catch (\Throwable) {
+            // Preview is best-effort when Admin2 skips full page bootstrap.
+        }
+
         return [
             'ok' => true,
             'menu' => $synced,
-            'preview' => $menu->forTwig(),
+            'preview' => $preview,
             'cache' => 'Cache cleared.',
         ];
     }
@@ -1416,6 +1745,55 @@ MUD;
         return (string) $this->grav['config']->get('system.pages.theme', 'grav-mud-site');
     }
 
+    /** Grav API routes may run before UriProcessor registers base_url on the container. */
+    private function gravBaseUrl(): string
+    {
+        try {
+            if ($this->grav->offsetExists('base_url')) {
+                $url = rtrim((string) $this->grav['base_url'], '/');
+                if ($url !== '' && $url !== '/') {
+                    return $url;
+                }
+            }
+        } catch (\Throwable) {
+            // fall through
+        }
+
+        try {
+            if ($this->grav->offsetExists('uri')) {
+                /** @var \Grav\Common\Uri $uri */
+                $uri = $this->grav['uri'];
+                if (!$this->grav->offsetExists('base_url')) {
+                    $uri->init();
+                }
+                if ($this->grav->offsetExists('base_url')) {
+                    return rtrim((string) $this->grav['base_url'], '/');
+                }
+
+                return rtrim($uri->rootUrl(true), '/');
+            }
+        } catch (\Throwable) {
+            // fall through
+        }
+
+        return $this->guessBaseUrlFromServer();
+    }
+
+    private function guessBaseUrlFromServer(): string
+    {
+        $custom = trim((string) $this->grav['config']->get('system.custom_base_url', ''));
+        if ($custom !== '') {
+            return rtrim($custom, '/');
+        }
+
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $scheme = $https ? 'https' : 'http';
+        $host = trim((string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+
+        return $host !== '' ? $scheme . '://' . $host : '';
+    }
+
     private function themeImagesPath(): string
     {
         return $this->realUserPath('themes/' . $this->activeTheme() . '/images');
@@ -1458,6 +1836,15 @@ MUD;
                 'type' => 'system',
                 'kind' => 'stat',
                 'stat' => 'forumz',
+                'width' => 1,
+                'enabled' => true,
+            ],
+            [
+                'id' => 'sys-eventz',
+                'title' => 'Eventz',
+                'type' => 'system',
+                'kind' => 'stat',
+                'stat' => 'eventz',
                 'width' => 1,
                 'enabled' => true,
             ],
@@ -1582,10 +1969,7 @@ MUD;
             . $mud . "\n"
             . "</div>";
 
-        require_once GRAV_ROOT . '/user/plugins/grav-mud-alpha/classes/MudAlphaCompiler.php';
-        $compiler = new \Grav\Plugin\GravMudAlpha\MudAlphaCompiler();
-        $theme = $this->activeTheme();
-        $compiler->setAssetBase($this->grav['base_url'] . '/user/themes/' . $theme . '/images');
+        $compiler = $this->configureMudCompiler();
 
         $html = $compiler->compile($wrapper);
         if (preg_match('/<div class="mud-admin-widget-body">(.*)<\/div>\s*<\/div>\s*$/s', $html, $m)) {

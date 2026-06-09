@@ -48,7 +48,7 @@ class MudAdminApiBridgeController extends AbstractApiController
         }
 
         $params = $request->getAttribute('route_params', []);
-        $sub = isset($params['subpath']) ? trim((string) $params['subpath'], '/') : '';
+        $sub = $this->resolveMudAdminSubpath($request, $params);
 
         parse_str($request->getUri()->getQuery(), $query);
         foreach ($query as $key => $value) {
@@ -105,18 +105,54 @@ class MudAdminApiBridgeController extends AbstractApiController
 
         $code = 200;
         $decoded = json_decode($output, true);
-        if (is_array($decoded) && ($decoded['ok'] ?? null) === false) {
-            $code = 400;
+        if (!is_array($decoded)) {
+            return ApiResponse::create(['ok' => false, 'error' => 'Invalid MUD admin response'], 500);
+        }
+
+        if (($decoded['ok'] ?? null) === false) {
+            $error = strtolower((string) ($decoded['error'] ?? ''));
+            $code = match (true) {
+                str_contains($error, 'unauthorized') => 401,
+                str_contains($error, 'not found') => 404,
+                str_contains($error, 'required') || str_contains($error, 'invalid') => 400,
+                str_contains($error, 'tribble') => 500,
+                default => 400,
+            };
+
+            return ApiResponse::create($decoded, $code);
         }
 
         if ($output === '') {
-            return new Response(204);
+            return ApiResponse::create(null, 204);
         }
 
-        return new Response($code, [
-            'Content-Type' => 'application/json; charset=UTF-8',
-            'X-Content-Type-Options' => 'nosniff',
-        ], $output);
+        return ApiResponse::create($decoded, $code);
+    }
+
+    /**
+     * Explicit FastRoute entries (e.g. /mud-admin/pages) do not populate {subpath}.
+     *
+     * @param array<string, mixed> $params
+     */
+    private function resolveMudAdminSubpath(ServerRequestInterface $request, array $params): string
+    {
+        if (isset($params['subpath'])) {
+            return trim((string) $params['subpath'], '/');
+        }
+
+        $route = $request->getAttribute('route');
+        $path = $route ? (string) $route->getRoute() : $request->getUri()->getPath();
+        $base = $this->config->get('plugins.api.route', '/api');
+        $prefix = $this->config->get('plugins.api.version_prefix', 'v1');
+        $apiMud = '/' . trim($base, '/') . '/' . $prefix . '/mud-admin';
+        if (str_starts_with($path, $apiMud)) {
+            return trim(substr($path, strlen($apiMud)), '/');
+        }
+        if (preg_match('#/mud-admin(?:/(.+))?$#', $path, $m)) {
+            return trim((string) ($m[1] ?? ''), '/');
+        }
+
+        return '';
     }
 
     /** @return array<string, mixed> */
